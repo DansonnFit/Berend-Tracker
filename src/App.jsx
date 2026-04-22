@@ -9,18 +9,63 @@ const MUTED   = '#8A8880'
 const SUCCESS = '#3A7D20'
 const BG      = '#F0EEE9'
 
-const WORKOUT_TYPES = ['Push', 'Pull', 'Benen', 'Full Body', 'Cardio', 'Conditie']
+const WORKOUT_TYPES = ['Push', 'Pull', 'Benen', 'Full Body', 'Core', 'Cardio']
 const BAND_COLORS = ['Geel', 'Groen', 'Rood', 'Blauw', 'Zwart', 'Oranje', 'Paars']
 const BAND_HEX = { Geel: '#F5C518', Groen: '#4CAF50', Rood: '#E53935', Blauw: '#1E88E5', Zwart: '#1C1C1C', Oranje: '#FB8C00', Paars: '#8E24AA' }
 const SET_TYPES = ['Reps', 'Tijd', 'Band']
 
 const EXERCISE_LIST = {
-  Push:       ['Bench Press', 'Incline Bench Press', 'Dumbbell Press', 'Shoulder Press', 'Lateral Raise', 'Cable Fly', 'Tricep Pushdown', 'Skull Crushers', 'Dips', 'Push-up'],
-  Pull:       ['Deadlift', 'Pull-up', 'Lat Pulldown', 'Seated Row', 'Barbell Row', 'Face Pull', 'Bicep Curl', 'Hammer Curl', 'Shrugs', 'Cable Row'],
-  Benen:      ['Squat', 'Romanian Deadlift', 'Leg Press', 'Leg Extension', 'Leg Curl', 'Hip Thrust', 'Lunges', 'Bulgarian Split Squat', 'Calf Raise', 'Hack Squat'],
-  'Full Body':['Deadlift', 'Squat', 'Bench Press', 'Pull-up', 'Overhead Press', 'Barbell Row'],
-  Cardio:     ['Loopband', 'Fiets', 'Roeien', 'Crosstrainer'],
-  Conditie:   ['HIIT', 'Intervaltraining', 'Steady State Cardio'],
+  Push: [
+    'Bench Press (Barbell)','Incline Bench Press (Barbell)','Decline Bench Press (Barbell)',
+    'Bench Press (Dumbbell)','Incline Bench Press (Dumbbell)','Decline Bench Press (Dumbbell)','Chest Fly (Dumbbell)','Pullover (Dumbbell)',
+    'Bench Press (Smith Machine)','Incline Bench Press (Smith Machine)',
+    'Cable Fly','Cable Crossover','Pec Deck','Chest Press (Machine)',
+    'Push-up','Dips (Chest)',
+    'Overhead Press (Barbell)','Push Press (Barbell)',
+    'Shoulder Press (Dumbbell)','Lateral Raise (Dumbbell)','Front Raise (Dumbbell)','Arnold Press',
+    'Lateral Raise (Cable)','Front Raise (Cable)','Shoulder Press (Machine)','Reverse Pec Deck',
+    'Skull Crushers (Barbell)','Close Grip Bench Press',
+    'Skull Crushers (Dumbbell)','Tricep Kickback (Dumbbell)','Overhead Tricep Extension (Dumbbell)',
+    'Tricep Pushdown (Touw)','Tricep Pushdown (Straight Bar)','Overhead Tricep Extension (Cable)','Tricep Dips (Machine)',
+  ],
+  Pull: [
+    'Deadlift (Barbell)','Barbell Row (Overhand)','Barbell Row (Underhand)','T-Bar Row','Rack Pull',
+    'Single Arm Row (Dumbbell)','Chest Supported Row (Dumbbell)','Pullover (Dumbbell)',
+    'Lat Pulldown (Brede Grip)','Lat Pulldown (Smalle Grip)','Lat Pulldown (Underhand)',
+    'Seated Cable Row (Brede Grip)','Seated Cable Row (Smalle Grip)','Straight Arm Pulldown','Machine Row','Chest Supported Row (Machine)',
+    'Pull-up (Overhand)','Pull-up (Underhand / Chin-up)','Pull-up (Neutraal)','Assisted Pull-up',
+    'Face Pull (Cable)','Rear Delt Fly (Dumbbell)','Rear Delt Fly (Machine)','Shrugs (Barbell)','Shrugs (Dumbbell)',
+    'Bicep Curl (Barbell)','EZ-Bar Curl','Preacher Curl (Barbell)',
+    'Bicep Curl (Dumbbell)','Hammer Curl (Dumbbell)','Incline Curl (Dumbbell)','Concentration Curl',
+    'Bicep Curl (Cable)','Hammer Curl (Cable)','Preacher Curl (Machine)',
+  ],
+  Benen: [
+    'Squat (Barbell)','Front Squat (Barbell)','Pause Squat (Barbell)',
+    'Squat (Smith Machine)','Split Squat (Smith Machine)',
+    'Leg Press (Machine)','Leg Extension (Machine)','Hack Squat (Machine)',
+    'Goblet Squat (Dumbbell)','Lunges (Dumbbell)','Lunges (Barbell)',
+    'Bulgarian Split Squat (Dumbbell)','Bulgarian Split Squat (Barbell)','Step-up (Dumbbell)',
+    'Romanian Deadlift (Barbell)','Stiff Leg Deadlift (Barbell)','Good Morning (Barbell)',
+    'Romanian Deadlift (Dumbbell)',
+    'Leg Curl (Lying)','Leg Curl (Seated)','Nordic Curl',
+    'Hip Thrust (Barbell)','Hip Thrust (Machine)','Hip Thrust (Dumbbell)',
+    'Cable Kickback','Glute Bridge (Barbell)','Abductie (Machine)','Adductie (Machine)',
+    'Calf Raise (Standing)','Calf Raise (Seated)','Calf Raise (Leg Press)',
+  ],
+  'Full Body': [
+    'Deadlift (Barbell)','Squat (Barbell)','Bench Press (Barbell)','Pull-up (Overhand)',
+    'Overhead Press (Barbell)','Barbell Row (Overhand)','Clean and Press','Thruster (Barbell)',
+    'Kettlebell Swing','Turkish Get-up',
+  ],
+  Core: [
+    'Plank','Side Plank','Crunches','Cable Crunch','Ab Rollout',
+    'Leg Raise (Hanging)','Leg Raise (Bench)','Russian Twist',
+    'Dead Bug','Bird Dog','Woodchop (Cable)','Pallof Press',
+  ],
+  Cardio: [
+    'Loopband','Fiets (Upright)','Fiets (Ligfiets)','Roeien','Crosstrainer',
+    'Stepmill','Ski Erg','Buiten Hardlopen','HIIT (Loopband)','Intervaltraining (Fiets)','Steady State Cardio',
+  ],
 }
 
 const ALL_EXERCISES = [...new Set(Object.values(EXERCISE_LIST).flat())].sort()
@@ -154,7 +199,7 @@ function SetRow({ set, index, onChange, onRemove }) {
 function ExerciseBlock({ ex, onUpdate, onRemove, suggestions }) {
   const [showSugg, setShowSugg] = useState(false)
   const ref = useRef()
-  const filtered = suggestions.filter(s => s.toLowerCase().includes(ex.name.toLowerCase()) && s.toLowerCase() !== ex.name.toLowerCase()).slice(0, 6)
+  const filtered = suggestions.filter(s => s.toLowerCase().includes(ex.name.toLowerCase()) && s.toLowerCase() !== ex.name.toLowerCase()).slice(0, 8)
   useEffect(() => {
     const fn = e => { if (ref.current && !ref.current.contains(e.target)) setShowSugg(false) }
     document.addEventListener('mousedown', fn)
@@ -177,7 +222,7 @@ function ExerciseBlock({ ex, onUpdate, onRemove, suggestions }) {
             onChange={e => { onUpdate({ ...ex, name: e.target.value }); setShowSugg(true) }}
             onFocus={() => setShowSugg(true)}/>
           {showSugg && filtered.length > 0 && (
-            <div style={{ position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 8, zIndex: 20, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.10)' }}>
+            <div style={{ position: 'absolute', top: 'calc(100% + 2px)', left: 0, right: 0, background: '#fff', border: `1px solid ${BORDER}`, borderRadius: 8, zIndex: 20, overflow: 'hidden', boxShadow: '0 4px 16px rgba(0,0,0,0.10)', maxHeight: 280, overflowY: 'auto' }}>
               {filtered.map(sug => <div key={sug} onClick={() => { onUpdate({ ...ex, name: sug }); setShowSugg(false) }} style={{ padding: '9px 12px', fontSize: 13, cursor: 'pointer', borderBottom: `1px solid ${BORDER}`, color: BLACK }} onMouseEnter={e => e.currentTarget.style.background=SURFACE} onMouseLeave={e => e.currentTarget.style.background='#fff'}>{sug}</div>)}
             </div>
           )}
@@ -468,3 +513,5 @@ export default function App() {
     </div>
   )
 }
+
+    
