@@ -10,6 +10,9 @@ const SUCCESS = '#3A7D20'
 const BG      = '#F0EEE9'
 
 const WORKOUT_TYPES = ['Push', 'Pull', 'Benen', 'Full Body', 'Cardio', 'Conditie']
+const BAND_COLORS = ['Geel', 'Groen', 'Rood', 'Blauw', 'Zwart', 'Oranje', 'Paars']
+const BAND_HEX = { Geel: '#F5C518', Groen: '#4CAF50', Rood: '#E53935', Blauw: '#1E88E5', Zwart: '#1C1C1C', Oranje: '#FB8C00', Paars: '#8E24AA' }
+const SET_TYPES = ['Reps', 'Tijd', 'Band']
 
 const EXERCISE_LIST = {
   Push:       ['Bench Press', 'Incline Bench Press', 'Dumbbell Press', 'Shoulder Press', 'Lateral Raise', 'Cable Fly', 'Tricep Pushdown', 'Skull Crushers', 'Dips', 'Push-up'],
@@ -25,6 +28,11 @@ const calc1RM = (weight, reps) => reps === 1 ? weight : Math.round(weight * (1 +
 function todayStr() { return new Date().toISOString().slice(0, 10) }
 function fmtDate(d) { return new Date(d + 'T12:00:00').toLocaleDateString('nl-NL', { day: '2-digit', month: 'short' }) }
 function fmtDateFull(d) { return new Date(d + 'T12:00:00').toLocaleDateString('nl-NL', { weekday: 'short', day: 'numeric', month: 'long' }) }
+function fmtSet(set) {
+  if (set.setType === 'Tijd') return set.seconds ? `${set.seconds}s` : '–'
+  if (set.setType === 'Band') return set.band ? `${set.band}${set.reps ? ` × ${set.reps}` : ''}` : '–'
+  return set.weight && set.reps ? `${set.weight}kg × ${set.reps}` : '–'
+}
 
 async function dbLoadSessions() {
   const { data, error } = await supabase.from('workouts').select('*').order('date', { ascending: false }).order('id', { ascending: false })
@@ -100,14 +108,45 @@ function BarChart({ data, color = GOLD }) {
 }
 
 function SetRow({ set, index, onChange, onRemove }) {
-  const est = set.weight && set.reps ? calc1RM(parseFloat(set.weight), parseInt(set.reps)) : null
+  const type = set.setType || 'Reps'
+  const est = type === 'Reps' && set.weight && set.reps ? calc1RM(parseFloat(set.weight), parseInt(set.reps)) : null
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
-      <div style={{ fontSize: 11, color: MUTED, width: 18, textAlign: 'center', flexShrink: 0 }}>{index+1}</div>
-      <div style={{ flex: 1 }}><input style={s.inp} type="number" placeholder="kg" step="0.5" value={set.weight} onChange={e => onChange('weight', e.target.value)}/></div>
-      <div style={{ flex: 1 }}><input style={s.inp} type="number" placeholder="reps" value={set.reps} onChange={e => onChange('reps', e.target.value)}/></div>
-      <div style={{ width: 58, fontSize: 11, color: est ? GOLD : MUTED, textAlign: 'center', fontWeight: 600, flexShrink: 0 }}>{est ? `${est} kg` : '1RM'}</div>
-      <button onClick={onRemove} style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 18, padding: '0 4px', lineHeight: 1, flexShrink: 0 }}>×</button>
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: 'flex', gap: 4, marginBottom: 6, marginLeft: 26 }}>
+        {SET_TYPES.map(t => (
+          <button key={t} onClick={() => onChange('setType', t)} style={{
+            padding: '3px 10px', borderRadius: 20, border: `1px solid ${type === t ? GOLD : BORDER}`,
+            background: type === t ? BLACK : 'transparent', color: type === t ? GOLD : MUTED,
+            fontSize: 11, fontWeight: 600, cursor: 'pointer',
+          }}>{t}</button>
+        ))}
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div style={{ fontSize: 11, color: MUTED, width: 18, textAlign: 'center', flexShrink: 0 }}>{index + 1}</div>
+        {type === 'Reps' && <>
+          <div style={{ flex: 1 }}><input style={s.inp} type="number" placeholder="kg" step="0.5" value={set.weight || ''} onChange={e => onChange('weight', e.target.value)}/></div>
+          <div style={{ flex: 1 }}><input style={s.inp} type="number" placeholder="reps" value={set.reps || ''} onChange={e => onChange('reps', e.target.value)}/></div>
+          <div style={{ width: 58, fontSize: 11, color: est ? GOLD : MUTED, textAlign: 'center', fontWeight: 600, flexShrink: 0 }}>{est ? `${est}kg` : '1RM'}</div>
+        </>}
+        {type === 'Tijd' && <>
+          <div style={{ flex: 1 }}><input style={s.inp} type="number" placeholder="seconden" value={set.seconds || ''} onChange={e => onChange('seconds', e.target.value)}/></div>
+          <div style={{ flex: 1 }}><input style={s.inp} type="number" placeholder="reps (opt.)" value={set.reps || ''} onChange={e => onChange('reps', e.target.value)}/></div>
+          <div style={{ width: 58, fontSize: 11, color: MUTED, textAlign: 'center', flexShrink: 0 }}>{set.seconds ? `${set.seconds}s` : '–'}</div>
+        </>}
+        {type === 'Band' && <>
+          <div style={{ flex: 1 }}>
+            <select style={s.inp} value={set.band || ''} onChange={e => onChange('band', e.target.value)}>
+              <option value="">Kleur...</option>
+              {BAND_COLORS.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div style={{ flex: 1 }}><input style={s.inp} type="number" placeholder="reps (opt.)" value={set.reps || ''} onChange={e => onChange('reps', e.target.value)}/></div>
+          <div style={{ width: 58, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            {set.band && <div style={{ width: 20, height: 20, borderRadius: '50%', background: BAND_HEX[set.band] || MUTED, border: '2px solid white', boxShadow: '0 0 0 1px #ccc' }}/>}
+          </div>
+        </>}
+        <button onClick={onRemove} style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 18, padding: '0 4px', lineHeight: 1, flexShrink: 0 }}>×</button>
+      </div>
     </div>
   )
 }
@@ -121,12 +160,15 @@ function ExerciseBlock({ ex, onUpdate, onRemove, suggestions }) {
     document.addEventListener('mousedown', fn)
     return () => document.removeEventListener('mousedown', fn)
   }, [])
-  const addSet = () => onUpdate({ ...ex, sets: [...ex.sets, { weight: ex.sets[ex.sets.length-1]?.weight || '', reps: '' }] })
+  const addSet = () => {
+    const last = ex.sets[ex.sets.length - 1] || {}
+    onUpdate({ ...ex, sets: [...ex.sets, { setType: last.setType || 'Reps', weight: last.weight || '', reps: '', seconds: '', band: last.band || '' }] })
+  }
   const updateSet = (i, k, v) => onUpdate({ ...ex, sets: ex.sets.map((set, si) => si === i ? { ...set, [k]: v } : set) })
   const removeSet = i => onUpdate({ ...ex, sets: ex.sets.filter((_, si) => si !== i) })
-  const validSets = ex.sets.filter(s => s.weight && s.reps)
-  const totalVol = validSets.reduce((a, s) => a + parseFloat(s.weight) * parseInt(s.reps), 0)
-  const best1RM = validSets.reduce((b, s) => Math.max(b, calc1RM(parseFloat(s.weight), parseInt(s.reps))), 0)
+  const repsSets = ex.sets.filter(s => (s.setType === 'Reps' || !s.setType) && s.weight && s.reps)
+  const totalVol = repsSets.reduce((a, s) => a + parseFloat(s.weight) * parseInt(s.reps), 0)
+  const best1RM = repsSets.reduce((b, s) => Math.max(b, calc1RM(parseFloat(s.weight), parseInt(s.reps))), 0)
   return (
     <div style={{ background: SURFACE, borderRadius: 12, padding: '14px 16px', marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
@@ -141,11 +183,6 @@ function ExerciseBlock({ ex, onUpdate, onRemove, suggestions }) {
           )}
         </div>
         <button onClick={onRemove} style={{ background: 'none', border: 'none', cursor: 'pointer', color: MUTED, fontSize: 20, padding: '0 4px', lineHeight: 1 }}>×</button>
-      </div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 8, padding: '0 22px 0 26px' }}>
-        {['Gewicht (kg)', 'Reps'].map(h => <div key={h} style={{ flex: 1, fontSize: 10, color: MUTED, textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>{h}</div>)}
-        <div style={{ width: 58, fontSize: 10, color: GOLD, textTransform: 'uppercase', letterSpacing: '0.06em', textAlign: 'center' }}>1RM*</div>
-        <div style={{ width: 24 }}/>
       </div>
       {ex.sets.map((set, i) => <SetRow key={i} set={set} index={i} onChange={(k,v) => updateSet(i,k,v)} onRemove={() => removeSet(i)}/>)}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 8 }}>
@@ -168,7 +205,7 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [wDate, setWDate] = useState(todayStr())
   const [wType, setWType] = useState('Push')
-  const [exercises, setExercises] = useState([{ id: 1, name: '', sets: [{ weight: '', reps: '' }] }])
+  const [exercises, setExercises] = useState([{ id: 1, name: '', sets: [{ setType: 'Reps', weight: '', reps: '', seconds: '', band: '' }] }])
   const [wNotes, setWNotes] = useState('')
   const [saved, setSaved] = useState(false)
   const [workoutView, setWorkoutView] = useState('log')
@@ -193,11 +230,11 @@ export default function App() {
   const allExSugg = [...new Set([...ALL_EXERCISES, ...usedExercises])].sort()
 
   const handleSaveWorkout = async () => {
-    const validEx = exercises.filter(e => e.name && e.sets.some(s => s.weight && s.reps))
+    const validEx = exercises.filter(e => e.name && e.sets.some(s => s.weight || s.seconds || s.band))
     if (!validEx.length) return
     await dbSaveSession({ id: Date.now(), date: wDate, type: wType, exercises: validEx, notes: wNotes })
     setSaved(true)
-    setExercises([{ id: Date.now(), name: '', sets: [{ weight: '', reps: '' }] }])
+    setExercises([{ id: Date.now(), name: '', sets: [{ setType: 'Reps', weight: '', reps: '', seconds: '', band: '' }] }])
     setWNotes('')
     await reload()
     setTimeout(() => { setSaved(false); setWorkoutView('history') }, 1500)
@@ -212,7 +249,7 @@ export default function App() {
 
   const exerciseHistory = sessions.filter(s => (s.exercises||[]).some(e => e.name === progExercise)).map(s => {
     const ex = s.exercises.find(e => e.name === progExercise)
-    const vs = (ex.sets||[]).filter(s => s.weight && s.reps)
+    const vs = (ex.sets||[]).filter(s => (s.setType === 'Reps' || !s.setType) && s.weight && s.reps)
     return { date: s.date, best1RM: vs.reduce((b,s) => Math.max(b, calc1RM(parseFloat(s.weight), parseInt(s.reps))), 0), maxWeight: vs.reduce((b,s) => Math.max(b, parseFloat(s.weight)), 0), totalVol: vs.reduce((a,s) => a+parseFloat(s.weight)*parseInt(s.reps), 0), sets: vs }
   }).reverse()
 
@@ -244,7 +281,7 @@ export default function App() {
         <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginBottom:14 }}>
           <StatPill label="Trainingen" value={sessions.length} unit="totaal" accent/>
           <StatPill label="Laatste" value={sessions[0]?fmtDate(sessions[0].date):null} unit={sessions[0]?.type}/>
-          <StatPill label="Gewicht" value={checkins.find(c=>c.gewicht)?.gewicht?`${checkins.find(c=>c.gewicht).gewicht}`:null} unit="kg"/>
+          <StatPill label="Gewicht" value={checkins.find(c=>c.gewicht)?.gewicht||null} unit="kg"/>
           <StatPill label="Oefeningen" value={usedExercises.length} unit="gelogd"/>
         </div>
 
@@ -266,35 +303,75 @@ export default function App() {
                 </Card>
                 <Card>
                   <SectionLabel>Oefeningen</SectionLabel>
-                  {exercises.map(ex => <ExerciseBlock key={ex.id} ex={ex} suggestions={wType&&EXERCISE_LIST[wType]?[...new Set([...EXERCISE_LIST[wType],...usedExercises,...ALL_EXERCISES])]:allExSugg} onUpdate={data=>setExercises(e=>e.map(e=>e.id===ex.id?{...e,...data}:e))} onRemove={()=>setExercises(e=>e.filter(e=>e.id!==ex.id))}/>)}
-                  <button onClick={()=>setExercises(ex=>[...ex,{id:Date.now(),name:'',sets:[{weight:'',reps:''}]}])} style={{ width:'100%', padding:'10px', borderRadius:10, border:`1.5px dashed ${BORDER}`, background:'none', color:MUTED, fontSize:13, cursor:'pointer', marginTop:4 }}>+ Oefening toevoegen</button>
-                  <div style={{ fontSize:10, color:MUTED, marginTop:10, paddingTop:10, borderTop:`1px solid ${BORDER}` }}>* 1RM via Epley: gewicht × (1 + reps ÷ 30)</div>
+                  {exercises.map(ex => (
+                    <ExerciseBlock key={ex.id} ex={ex}
+                      suggestions={wType&&EXERCISE_LIST[wType]?[...new Set([...EXERCISE_LIST[wType],...usedExercises,...ALL_EXERCISES])]:allExSugg}
+                      onUpdate={data=>setExercises(e=>e.map(e=>e.id===ex.id?{...e,...data}:e))}
+                      onRemove={()=>setExercises(e=>e.filter(e=>e.id!==ex.id))}/>
+                  ))}
+                  <button onClick={()=>setExercises(ex=>[...ex,{id:Date.now(),name:'',sets:[{setType:'Reps',weight:'',reps:'',seconds:'',band:''}]}])} style={{ width:'100%', padding:'10px', borderRadius:10, border:`1.5px dashed ${BORDER}`, background:'none', color:MUTED, fontSize:13, cursor:'pointer', marginTop:4 }}>
+                    + Oefening toevoegen
+                  </button>
+                  <div style={{ fontSize:10, color:MUTED, marginTop:10, paddingTop:10, borderTop:`1px solid ${BORDER}` }}>
+                    * 1RM via Epley (alleen bij Reps). Tijd = seconden. Band = kleur weerstandsband.
+                  </div>
                 </Card>
-                <Card><SectionLabel>Notities</SectionLabel><textarea style={{ ...s.inp, height:72, resize:'vertical', fontFamily:'inherit', fontSize:13 }} placeholder="Gevoel, blessures..." value={wNotes} onChange={e=>setWNotes(e.target.value)}/></Card>
-                <button onClick={handleSaveWorkout} style={{ width:'100%', padding:'14px', borderRadius:12, border:'none', cursor:'pointer', background:saved?SUCCESS:BLACK, color:saved?'#7BC950':GOLD, fontSize:15, fontWeight:700, transition:'all 0.2s' }}>{saved?'Sessie opgeslagen!':'Sessie opslaan'}</button>
+                <Card>
+                  <SectionLabel>Notities</SectionLabel>
+                  <textarea style={{ ...s.inp, height:72, resize:'vertical', fontFamily:'inherit', fontSize:13 }} placeholder="Gevoel, blessures, opmerkingen..." value={wNotes} onChange={e=>setWNotes(e.target.value)}/>
+                </Card>
+                <button onClick={handleSaveWorkout} style={{ width:'100%', padding:'14px', borderRadius:12, border:'none', cursor:'pointer', background:saved?SUCCESS:BLACK, color:saved?'#7BC950':GOLD, fontSize:15, fontWeight:700, transition:'all 0.2s' }}>
+                  {saved?'Sessie opgeslagen!':'Sessie opslaan'}
+                </button>
               </div>
             )}
             {workoutView==='history' && (
               <div>
-                {sessions.length===0?<Card style={{ textAlign:'center', padding:'40px 20px' }}><div style={{ color:MUTED }}>Nog geen trainingen gelogd.</div></Card>:sessions.map(s=>{
-                  const allSets=(s.exercises||[]).flatMap(e=>(e.sets||[]).filter(st=>st.weight&&st.reps))
-                  const totalVol=allSets.reduce((a,st)=>a+parseFloat(st.weight)*parseInt(st.reps),0)
-                  return <Card key={s.id}>
-                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
-                      <div><div style={{ fontSize:14, fontWeight:600, color:BLACK }}>{fmtDateFull(s.date)}</div><div style={{ fontSize:12, color:MUTED, marginTop:2 }}>{(s.exercises||[]).filter(e=>e.name).length} oefeningen · {allSets.length} sets</div></div>
-                      <div style={{ display:'flex', gap:8 }}><span style={{ fontSize:11, background:BLACK, color:GOLD, padding:'3px 10px', borderRadius:20, fontWeight:700 }}>{s.type}</span><span style={{ fontSize:11, color:MUTED }}>{(totalVol/1000).toFixed(1)}t</span></div>
-                    </div>
-                    {(s.exercises||[]).filter(e=>e.name).map((ex,ei,arr)=>{
-                      const vs=(ex.sets||[]).filter(s=>s.weight&&s.reps)
-                      const top1RM=vs.reduce((b,s)=>Math.max(b,calc1RM(parseFloat(s.weight),parseInt(s.reps))),0)
-                      return <div key={ei} style={{ marginBottom:ei<arr.length-1?10:0 }}>
-                        <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}><span style={{ fontSize:13, fontWeight:500, color:BLACK }}>{ex.name}</span>{top1RM>0&&<span style={{ fontSize:11, color:GOLD }}>1RM ~{top1RM} kg</span>}</div>
-                        <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>{vs.map((set,si)=><span key={si} style={{ fontSize:11, background:SURFACE, border:`1px solid ${BORDER}`, borderRadius:6, padding:'3px 8px', color:'#555' }}>{set.weight}kg × {set.reps}</span>)}</div>
-                      </div>
-                    })}
-                    {s.notes&&<div style={{ marginTop:10, fontSize:12, color:MUTED, fontStyle:'italic', paddingTop:10, borderTop:`1px solid ${BORDER}` }}>{s.notes}</div>}
-                  </Card>
-                })}
+                {sessions.length===0
+                  ? <Card style={{ textAlign:'center', padding:'40px 20px' }}><div style={{ color:MUTED }}>Nog geen trainingen gelogd.</div></Card>
+                  : sessions.map(s => {
+                    const allSets = (s.exercises||[]).flatMap(e=>(e.sets||[]))
+                    const repsSets = allSets.filter(st=>(!st.setType||st.setType==='Reps')&&st.weight&&st.reps)
+                    const totalVol = repsSets.reduce((a,st)=>a+parseFloat(st.weight)*parseInt(st.reps),0)
+                    return (
+                      <Card key={s.id}>
+                        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:12 }}>
+                          <div>
+                            <div style={{ fontSize:14, fontWeight:600, color:BLACK }}>{fmtDateFull(s.date)}</div>
+                            <div style={{ fontSize:12, color:MUTED, marginTop:2 }}>{(s.exercises||[]).filter(e=>e.name).length} oefeningen · {allSets.length} sets</div>
+                          </div>
+                          <div style={{ display:'flex', gap:8 }}>
+                            <span style={{ fontSize:11, background:BLACK, color:GOLD, padding:'3px 10px', borderRadius:20, fontWeight:700 }}>{s.type}</span>
+                            {totalVol > 0 && <span style={{ fontSize:11, color:MUTED }}>{(totalVol/1000).toFixed(1)}t</span>}
+                          </div>
+                        </div>
+                        {(s.exercises||[]).filter(e=>e.name).map((ex,ei,arr)=>{
+                          const vs = (ex.sets||[]).filter(st=>(!st.setType||st.setType==='Reps')&&st.weight&&st.reps)
+                          const top1RM = vs.reduce((b,s)=>Math.max(b,calc1RM(parseFloat(s.weight),parseInt(s.reps))),0)
+                          return (
+                            <div key={ei} style={{ marginBottom:ei<arr.length-1?10:0 }}>
+                              <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+                                <span style={{ fontSize:13, fontWeight:500, color:BLACK }}>{ex.name}</span>
+                                {top1RM>0&&<span style={{ fontSize:11, color:GOLD }}>1RM ~{top1RM} kg</span>}
+                              </div>
+                              <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
+                                {(ex.sets||[]).map((set,si)=>{
+                                  const isBand = set.setType==='Band'
+                                  return (
+                                    <span key={si} style={{ fontSize:11, background:SURFACE, border:`1px solid ${BORDER}`, borderRadius:6, padding:'3px 8px', color:'#555', display:'flex', alignItems:'center', gap:4 }}>
+                                      {isBand && set.band && <span style={{ width:10, height:10, borderRadius:'50%', background:BAND_HEX[set.band]||MUTED, display:'inline-block', flexShrink:0 }}/>}
+                                      {fmtSet(set)}
+                                    </span>
+                                  )
+                                })}
+                              </div>
+                            </div>
+                          )
+                        })}
+                        {s.notes&&<div style={{ marginTop:10, fontSize:12, color:MUTED, fontStyle:'italic', paddingTop:10, borderTop:`1px solid ${BORDER}` }}>{s.notes}</div>}
+                      </Card>
+                    )
+                  })}
               </div>
             )}
           </div>
@@ -311,52 +388,78 @@ export default function App() {
                 ))}
               </div>
             </Card>
-            <Card><SectionLabel>Opmerkingen</SectionLabel><textarea style={{ ...s.inp, height:80, resize:'vertical', fontFamily:'inherit', fontSize:13 }} placeholder="Energieniveau, slaap, gevoel..." value={checkin.opmerkingen||''} onChange={e=>setCheckin(c=>({...c,opmerkingen:e.target.value}))}/></Card>
+            <Card><SectionLabel>Opmerkingen voor Danny</SectionLabel><textarea style={{ ...s.inp, height:80, resize:'vertical', fontFamily:'inherit', fontSize:13 }} placeholder="Energieniveau, slaap, gevoel..." value={checkin.opmerkingen||''} onChange={e=>setCheckin(c=>({...c,opmerkingen:e.target.value}))}/></Card>
             <button onClick={handleSaveCheckin} style={{ width:'100%', padding:'14px', borderRadius:12, border:'none', cursor:'pointer', background:checkinSaved?SUCCESS:BLACK, color:checkinSaved?'#7BC950':GOLD, fontSize:15, fontWeight:700, transition:'all 0.2s' }}>{checkinSaved?'Opgeslagen!':'Check-in opslaan'}</button>
             {checkins.length>0&&<div style={{ marginTop:20 }}>
               <div style={{ fontSize:11, fontWeight:500, color:MUTED, textTransform:'uppercase', letterSpacing:'0.07em', marginBottom:10 }}>Recente check-ins</div>
-              {checkins.slice(0,5).map(c=><Card key={c.date} style={{ padding:'12px 16px', marginBottom:8 }}>
-                <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}><span style={{ fontSize:13, fontWeight:500, color:BLACK }}>{fmtDateFull(c.date)}</span>{c.gewicht&&<span style={{ fontSize:13, color:GOLD, fontWeight:700 }}>{c.gewicht} kg</span>}</div>
-                <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>{[['Kcal',c.calorieen],['Eiwit',c.eiwitten?`${c.eiwitten}g`:null],['Water',c.water?`${c.water}L`:null],['Stappen',c.stappen?parseInt(c.stappen).toLocaleString('nl-NL'):null]].filter(([,v])=>v).map(([l,v])=><span key={l} style={{ fontSize:11, background:SURFACE, border:`1px solid ${BORDER}`, borderRadius:6, padding:'3px 8px', color:'#555' }}>{l}: {v}</span>)}</div>
-              </Card>)}
+              {checkins.slice(0,5).map(c=>(
+                <Card key={c.date} style={{ padding:'12px 16px', marginBottom:8 }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}><span style={{ fontSize:13, fontWeight:500, color:BLACK }}>{fmtDateFull(c.date)}</span>{c.gewicht&&<span style={{ fontSize:13, color:GOLD, fontWeight:700 }}>{c.gewicht} kg</span>}</div>
+                  <div style={{ display:'flex', gap:5, flexWrap:'wrap' }}>{[['Kcal',c.calorieen],['Eiwit',c.eiwitten?`${c.eiwitten}g`:null],['Water',c.water?`${c.water}L`:null],['Stappen',c.stappen?parseInt(c.stappen).toLocaleString('nl-NL'):null]].filter(([,v])=>v).map(([l,v])=><span key={l} style={{ fontSize:11, background:SURFACE, border:`1px solid ${BORDER}`, borderRadius:6, padding:'3px 8px', color:'#555' }}>{l}: {v}</span>)}</div>
+                </Card>
+              ))}
             </div>}
           </div>
         )}
 
         {tab==='progressie' && (
           <div>
-            {usedExercises.length===0?<Card style={{ textAlign:'center', padding:'40px 20px' }}><div style={{ color:MUTED }}>Log eerst trainingen om progressie te zien.</div></Card>:<>
-              <Card>
-                <SectionLabel>Selecteer oefening</SectionLabel>
-                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
-                  <div><label style={s.lbl}>Oefening</label><select style={s.inp} value={progExercise} onChange={e=>setProgExercise(e.target.value)}>{usedExercises.map(e=><option key={e}>{e}</option>)}</select></div>
-                  <div><label style={s.lbl}>Metric</label><select style={s.inp} value={progMetric} onChange={e=>setProgMetric(e.target.value)}><option value="1rm">Geschatte 1RM (kg)</option><option value="weight">Max. gewicht (kg)</option><option value="volume">Totaal volume (kg)</option><option value="sets">Aantal sets</option></select></div>
-                </div>
-              </Card>
-              {exerciseHistory.length>0&&<>
+            {usedExercises.length===0
+              ? <Card style={{ textAlign:'center', padding:'40px 20px' }}><div style={{ color:MUTED }}>Log eerst trainingen om progressie te zien.</div></Card>
+              : <>
                 <Card>
-                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}><SectionLabel>{progExercise}</SectionLabel><span style={{ fontSize:12, color:MUTED }}>{exerciseHistory.length} sessies</span></div>
-                  <LineChart data={progData} color={GOLD} formatY={v=>progMetric==='volume'?`${(v/1000).toFixed(1)}t`:`${v}`}/>
-                  <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginTop:16 }}>
-                    {(()=>{ const maxRM=Math.max(...exerciseHistory.map(e=>e.best1RM)), maxW=Math.max(...exerciseHistory.map(e=>e.maxWeight)), totalVol=exerciseHistory.reduce((a,e)=>a+e.totalVol,0), delta=exerciseHistory.length>1?exerciseHistory[exerciseHistory.length-1].best1RM-exerciseHistory[0].best1RM:0
-                      return [{ label:'Beste 1RM', value:`${maxRM} kg`, sub:delta!==0?`${delta>0?'+':''}${delta} kg`:null },{ label:'Max gewicht', value:`${maxW} kg`, sub:null },{ label:'Totaal volume', value:`${(totalVol/1000).toFixed(1)}t`, sub:'alle sessies' },{ label:'Sessies', value:exerciseHistory.length, sub:null }]
-                    })().map(({label,value,sub})=><div key={label} style={{ background:SURFACE, borderRadius:10, padding:'10px 12px' }}><div style={{ fontSize:10, color:MUTED, marginBottom:3, textTransform:'uppercase', letterSpacing:'0.06em' }}>{label}</div><div style={{ fontSize:16, fontWeight:700, color:BLACK }}>{value}</div>{sub&&<div style={{ fontSize:10, color:GOLD, marginTop:2 }}>{sub}</div>}</div>)}
+                  <SectionLabel>Selecteer oefening</SectionLabel>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
+                    <div><label style={s.lbl}>Oefening</label><select style={s.inp} value={progExercise} onChange={e=>setProgExercise(e.target.value)}>{usedExercises.map(e=><option key={e}>{e}</option>)}</select></div>
+                    <div><label style={s.lbl}>Metric</label><select style={s.inp} value={progMetric} onChange={e=>setProgMetric(e.target.value)}><option value="1rm">Geschatte 1RM (kg)</option><option value="weight">Max. gewicht (kg)</option><option value="volume">Totaal volume (kg)</option><option value="sets">Aantal sets</option></select></div>
                   </div>
                 </Card>
-                {exerciseHistory.length>=2&&<Card><SectionLabel>Volume per sessie</SectionLabel><BarChart data={exerciseHistory.map(e=>({date:e.date,y:e.totalVol}))} color={GOLD}/></Card>}
-                <Card>
-                  <SectionLabel>Sessie log — {progExercise}</SectionLabel>
-                  <div style={{ overflowX:'auto' }}>
-                    <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
-                      <thead><tr style={{ borderBottom:`2px solid ${BORDER}` }}>{['Datum','Sets','Beste set','1RM','Volume'].map(h=><th key={h} style={{ padding:'6px 10px', textAlign:'left', color:MUTED, fontWeight:500, fontSize:10, textTransform:'uppercase', letterSpacing:'0.06em' }}>{h}</th>)}</tr></thead>
-                      <tbody>{[...exerciseHistory].reverse().map((e,i)=>{ const bestSet=e.sets.reduce((b,s)=>parseFloat(s.weight)>=parseFloat(b.weight||0)?s:b,{})
-                        return <tr key={i} style={{ borderBottom:`1px solid ${BORDER}`, background:i%2===0?'transparent':SURFACE }}><td style={{ padding:'9px 10px', fontWeight:500, color:BLACK }}>{fmtDateFull(e.date)}</td><td style={{ padding:'9px 10px', color:'#555' }}>{e.sets.length}</td><td style={{ padding:'9px 10px', color:'#555' }}>{bestSet.weight}kg × {bestSet.reps}</td><td style={{ padding:'9px 10px', color:GOLD, fontWeight:700 }}>{e.best1RM} kg</td><td style={{ padding:'9px 10px', color:'#555' }}>{e.totalVol.toLocaleString('nl-NL')} kg</td></tr>
-                      })}</tbody>
-                    </table>
-                  </div>
-                </Card>
+                {exerciseHistory.length>0&&<>
+                  <Card>
+                    <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:14 }}><SectionLabel>{progExercise}</SectionLabel><span style={{ fontSize:12, color:MUTED }}>{exerciseHistory.length} sessies</span></div>
+                    <LineChart data={progData} color={GOLD} formatY={v=>progMetric==='volume'?`${(v/1000).toFixed(1)}t`:`${v}`}/>
+                    <div style={{ display:'grid', gridTemplateColumns:'repeat(4, 1fr)', gap:8, marginTop:16 }}>
+                      {(()=>{
+                        const maxRM=Math.max(...exerciseHistory.map(e=>e.best1RM))
+                        const maxW=Math.max(...exerciseHistory.map(e=>e.maxWeight))
+                        const totalVol=exerciseHistory.reduce((a,e)=>a+e.totalVol,0)
+                        const delta=exerciseHistory.length>1?exerciseHistory[exerciseHistory.length-1].best1RM-exerciseHistory[0].best1RM:0
+                        return [
+                          {label:'Beste 1RM',value:`${maxRM} kg`,sub:delta!==0?`${delta>0?'+':''}${delta} kg`:null},
+                          {label:'Max gewicht',value:`${maxW} kg`,sub:null},
+                          {label:'Totaal volume',value:`${(totalVol/1000).toFixed(1)}t`,sub:'alle sessies'},
+                          {label:'Sessies',value:exerciseHistory.length,sub:null},
+                        ]
+                      })().map(({label,value,sub})=>(
+                        <div key={label} style={{ background:SURFACE, borderRadius:10, padding:'10px 12px' }}>
+                          <div style={{ fontSize:10, color:MUTED, marginBottom:3, textTransform:'uppercase', letterSpacing:'0.06em' }}>{label}</div>
+                          <div style={{ fontSize:16, fontWeight:700, color:BLACK }}>{value}</div>
+                          {sub&&<div style={{ fontSize:10, color:GOLD, marginTop:2 }}>{sub}</div>}
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                  {exerciseHistory.length>=2&&<Card><SectionLabel>Volume per sessie</SectionLabel><BarChart data={exerciseHistory.map(e=>({date:e.date,y:e.totalVol}))} color={GOLD}/></Card>}
+                  <Card>
+                    <SectionLabel>Sessie log — {progExercise}</SectionLabel>
+                    <div style={{ overflowX:'auto' }}>
+                      <table style={{ width:'100%', borderCollapse:'collapse', fontSize:12 }}>
+                        <thead><tr style={{ borderBottom:`2px solid ${BORDER}` }}>{['Datum','Sets','Beste set','1RM','Volume'].map(h=><th key={h} style={{ padding:'6px 10px', textAlign:'left', color:MUTED, fontWeight:500, fontSize:10, textTransform:'uppercase', letterSpacing:'0.06em' }}>{h}</th>)}</tr></thead>
+                        <tbody>{[...exerciseHistory].reverse().map((e,i)=>{
+                          const bestSet=e.sets.reduce((b,s)=>parseFloat(s.weight)>=parseFloat(b.weight||0)?s:b,{})
+                          return <tr key={i} style={{ borderBottom:`1px solid ${BORDER}`, background:i%2===0?'transparent':SURFACE }}>
+                            <td style={{ padding:'9px 10px', fontWeight:500, color:BLACK }}>{fmtDateFull(e.date)}</td>
+                            <td style={{ padding:'9px 10px', color:'#555' }}>{e.sets.length}</td>
+                            <td style={{ padding:'9px 10px', color:'#555' }}>{bestSet.weight}kg × {bestSet.reps}</td>
+                            <td style={{ padding:'9px 10px', color:GOLD, fontWeight:700 }}>{e.best1RM} kg</td>
+                            <td style={{ padding:'9px 10px', color:'#555' }}>{e.totalVol.toLocaleString('nl-NL')} kg</td>
+                          </tr>
+                        })}</tbody>
+                      </table>
+                    </div>
+                  </Card>
+                </>}
               </>}
-            </>}
           </div>
         )}
 
